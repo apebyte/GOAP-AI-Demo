@@ -1,0 +1,63 @@
+# Visual Studio
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.opendb
+*.opensdf
+*.sdf
+.vsconfig
+
+# Unreal Engine
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/
+*.log
+*.tmp
+*.bak
+*.db
+*.ipch
+*.xcodeproj
+*.xcworkspace
+*.sln
+
+# Assets
+*_BuiltData.uasset
+SourceArt/**/*.png
+SourceArt/**/*.tga
+
+# Plugins
+Plugins/**/Binaries/*
+Plugins/**/Intermediate/*
+
+# Fortran/Compiled Files (if applicable)
+*.slo
+*.lo
+*.o
+*.obj
+*.gch
+*.pch
+*.so
+*.dylib
+*.dll
+*.mod
+*.lai
+*.la
+*.a
+*.lib
+*.exe
+*.out
+*.app
+*.ipa
+
+# Build folder exclusions
+Build/*
+!Build/*/
+Build/*/**
+!Build/*/PakBlacklist*.txt
+!Build/**/*.ico
