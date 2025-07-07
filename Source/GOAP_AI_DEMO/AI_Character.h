@@ -4,6 +4,7 @@
 #include "GameFramework/Character.h"
 #include "Node.h"
 #include "GOAPAgentComponent.h" // Add this include
+#include "AC_NavigationComponent.h" // Add this include
 #include "AI_Character.generated.h"
 
 // Forward–declare the types used in HandleMoveCompleted
@@ -32,6 +33,10 @@ public:
     /** GOAP Agent Component */
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "GOAP")
     UGOAPAgentComponent* GOAPAgentComponent;
+
+    /** Navigation Component */
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Navigation")
+    UAC_NavigationComponent* NavigationComponent;
 
 private:
     void MoveToNode(ANode* Target); // Issues the MoveTo request

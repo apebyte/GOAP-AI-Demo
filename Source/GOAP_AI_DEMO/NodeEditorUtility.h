@@ -20,5 +20,8 @@ public:
     static void AutoLink(float Distance = 250.0f);
 
     UFUNCTION(CallInEditor, BlueprintCallable, Category = "Node Editor")
-    static void UnlinkWithinDistance(float Distance = 250.0f);
+    static void AutoUnlink(float Distance = 250.0f);
+
+    UFUNCTION(CallInEditor, BlueprintCallable, Category = "Node Editor")
+    static void UnlinkAll();
 };

@@ -2,6 +2,7 @@
 #include "Node.h"
 #include "Editor.h"
 #include "Engine/Selection.h"
+#include "EngineUtils.h"
 
 void UNodeEditorUtility::Link()
 {
@@ -38,10 +39,15 @@ void UNodeEditorUtility::Link()
             if (Node != OtherNode && !Node->LinkedNodes.Contains(OtherNode))
             {
                 Node->LinkedNodes.Add(OtherNode);
+                Node->Modify();
             }
         }
-        // Mark the node as changed so the editor saves the update
-        Node->Modify();
+    }
+
+    // After all links are set, update splines for all nodes
+    for (ANode* Node : SelectedNodes)
+    {
+        Node->UpdateLinkSplines();
     }
 #endif
 }
@@ -49,11 +55,9 @@ void UNodeEditorUtility::Link()
 void UNodeEditorUtility::Unlink()
 {
 #if WITH_EDITOR
-    // Get the current editor world
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) return;
 
-    // Get all selected actors
     TArray<AActor*> SelectedActors;
     for (FSelectionIterator It(GEditor->GetSelectedActorIterator()); It; ++It)
     {
@@ -63,7 +67,6 @@ void UNodeEditorUtility::Unlink()
         }
     }
 
-    // Filter to only ANode actors
     TArray<ANode*> SelectedNodes;
     for (AActor* Actor : SelectedActors)
     {
@@ -73,10 +76,11 @@ void UNodeEditorUtility::Unlink()
         }
     }
 
-    // Clear the LinkedNodes array for each selected node
+    // Clear the LinkedNodes array and remove splines for each selected node
     for (ANode* Node : SelectedNodes)
     {
         Node->LinkedNodes.Empty();
+        Node->UpdateLinkSplines();
         Node->Modify();
     }
 #endif
@@ -88,7 +92,6 @@ void UNodeEditorUtility::AutoLink(float Distance)
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) return;
 
-    // Get all selected actors
     TArray<AActor*> SelectedActors;
     for (FSelectionIterator It(GEditor->GetSelectedActorIterator()); It; ++It)
     {
@@ -98,7 +101,6 @@ void UNodeEditorUtility::AutoLink(float Distance)
         }
     }
 
-    // Filter to only ANode actors
     TArray<ANode*> SelectedNodes;
     for (AActor* Actor : SelectedActors)
     {
@@ -108,13 +110,14 @@ void UNodeEditorUtility::AutoLink(float Distance)
         }
     }
 
-    // Clear existing links
+    // Clear existing links and splines
     for (ANode* Node : SelectedNodes)
     {
         Node->LinkedNodes.Empty();
+        Node->UpdateLinkSplines();
     }
 
-    // Link nodes within distance
+    // Link nodes within distance (bidirectional)
     for (int32 i = 0; i < SelectedNodes.Num(); ++i)
     {
         ANode* NodeA = SelectedNodes[i];
@@ -125,8 +128,8 @@ void UNodeEditorUtility::AutoLink(float Distance)
             ANode* NodeB = SelectedNodes[j];
             FVector PosB = NodeB->GetActorLocation();
 
-            float Distance = FVector::Dist(PosA, PosB);
-            if (Distance <= Distance)
+            float Dist = FVector::Dist(PosA, PosB);
+            if (Dist <= Distance)
             {
                 if (!NodeA->LinkedNodes.Contains(NodeB))
                 {
@@ -140,21 +143,21 @@ void UNodeEditorUtility::AutoLink(float Distance)
         }
     }
 
-    // Mark nodes as modified
+    // Mark nodes as modified and update splines for all nodes
     for (ANode* Node : SelectedNodes)
     {
         Node->Modify();
+        Node->UpdateLinkSplines();
     }
 #endif
 }
 
-void UNodeEditorUtility::UnlinkWithinDistance(float Distance)
+void UNodeEditorUtility::AutoUnlink(float Distance)
 {
 #if WITH_EDITOR
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) return;
 
-    // Get all selected actors
     TArray<AActor*> SelectedActors;
     for (FSelectionIterator It(GEditor->GetSelectedActorIterator()); It; ++It)
     {
@@ -164,7 +167,6 @@ void UNodeEditorUtility::UnlinkWithinDistance(float Distance)
         }
     }
 
-    // Filter to only ANode actors
     TArray<ANode*> SelectedNodes;
     for (AActor* Actor : SelectedActors)
     {
@@ -174,7 +176,7 @@ void UNodeEditorUtility::UnlinkWithinDistance(float Distance)
         }
     }
 
-    // Unlink nodes within distance
+    // Unlink nodes within distance and remove splines
     for (int32 i = 0; i < SelectedNodes.Num(); ++i)
     {
         ANode* NodeA = SelectedNodes[i];
@@ -192,6 +194,7 @@ void UNodeEditorUtility::UnlinkWithinDistance(float Distance)
                 NodeA->LinkedNodes.Remove(NodeB);
             }
         }
+        NodeA->UpdateLinkSplines();
     }
 
     // Mark nodes as modified
@@ -202,3 +205,21 @@ void UNodeEditorUtility::UnlinkWithinDistance(float Distance)
 #endif
 }
 
+void UNodeEditorUtility::UnlinkAll()
+{
+#if WITH_EDITOR
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World) return;
+
+    for (TActorIterator<ANode> It(World); It; ++It)
+    {
+        ANode* Node = *It;
+        if (Node)
+        {
+            Node->LinkedNodes.Empty();
+            Node->UpdateLinkSplines();
+            Node->Modify();
+        }
+    }
+#endif
+}
