@@ -48,5 +48,5 @@ public:
 
 	// Debug: Draws the FinalPath using debug lines in the world
 	UFUNCTION(BlueprintCallable, Category = "Navigation|Debug")
-	void DebugDrawFinalPath(float Duration = 2.0f, FColor LineColor = FColor::Green) const;
+	void DebugDrawFinalPath() const;
 };

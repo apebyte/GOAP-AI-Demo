@@ -9,6 +9,7 @@ ANode::ANode()
 {
     MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
     RootComponent = MeshComponent;
+    UpdateLinkSplines();
 }
 
 void ANode::OnConstruction(const FTransform& Transform)

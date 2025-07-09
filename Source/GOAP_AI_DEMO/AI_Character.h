@@ -3,11 +3,10 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Node.h"
-#include "GOAPAgentComponent.h" // Add this include
-#include "AC_NavigationComponent.h" // Add this include
+#include "GOAPAgentComponent.h"
+#include "AC_NavigationComponent.h"
 #include "AI_Character.generated.h"
 
-// Forward–declare the types used in HandleMoveCompleted
 struct FAIRequestID;
 struct FPathFollowingResult;
 

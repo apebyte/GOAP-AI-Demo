@@ -27,21 +27,34 @@ void UAC_NavigationComponent::TickComponent(float DeltaTime, ELevelTick TickType
 
 void UAC_NavigationComponent::FindStartAndEndNodes(const FVector& TargetLocation)
 {
-	AActor* Owner = GetOwner();
-	if (!Owner) return;
+    UE_LOG(LogTemp, Warning, TEXT("FindStartAndEndNodes CALLED"));
 
-	UWorld* World = GetWorld();
-	if (!World) return;
+    // Get the owner actor of this component (the AI character)
+    AActor* Owner = GetOwner();
+    if (!Owner) {
+        UE_LOG(LogTemp, Warning, TEXT("FindStartAndEndNodes: Owner is nullptr"));
+        return;
+    }
 
-	ANode* ClosestStartNode = nullptr;
-	ANode* ClosestEndNode = nullptr;
-	float ClosestStartDistSq = TNumericLimits<float>::Max();
-	float ClosestEndDistSq = TNumericLimits<float>::Max();
-	FVector OwnerLocation = Owner->GetActorLocation();
+    // Get the world context
+    UWorld* World = GetWorld();
+    if (!World) {
+        UE_LOG(LogTemp, Warning, TEXT("FindStartAndEndNodes: World is nullptr"));
+        return;
+    }
+    
+    // Variables to track the closest nodes to the owner (start) and the target (end)
+    ANode* ClosestStartNode = nullptr;
+    ANode* ClosestEndNode = nullptr;
+    float ClosestStartDistSq = TNumericLimits<float>::Max();
+    float ClosestEndDistSq = TNumericLimits<float>::Max();
+    FVector OwnerLocation = Owner->GetActorLocation();
 
+	int32 NodeCount = 0;
 	// Iterate over all nodes in the world
 	for (TActorIterator<ANode> It(World); It; ++It)
 	{
+		NodeCount++;
 		ANode* Node = *It;
 		if (Node)
 		{
@@ -60,9 +73,32 @@ void UAC_NavigationComponent::FindStartAndEndNodes(const FVector& TargetLocation
 			}
 		}
 	}
+	UE_LOG(LogTemp, Warning, TEXT("Total nodes found: %d"), NodeCount);
+	UE_LOG(LogTemp, Warning, TEXT("Node search loop finished"));
 
 	StartNode = ClosestStartNode;
 	EndNode = ClosestEndNode;
+
+	// Debug draw spheres for start (red) and end (blue) nodes
+	if (StartNode)
+	{
+		DrawDebugSphere(World, StartNode->GetActorLocation(), 50.0f, 16, FColor::Red, false, 200.0f);
+	}
+	if (EndNode)
+	{
+		DrawDebugSphere(World, EndNode->GetActorLocation(), 50.0f, 16, FColor::Blue, false, 200.0f);
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("StartNode: %s, EndNode: %s"), 
+		StartNode ? *StartNode->GetName() : TEXT("None"), 
+		EndNode ? *EndNode->GetName() : TEXT("None"));
+
+	// If both nodes are found and are not the same, call FindPathAStar
+	if (StartNode && EndNode && StartNode != EndNode)
+	{
+		TArray<ANode*> OutPath;
+		//FindPathAStar(OutPath);
+	}
 }
 
 bool UAC_NavigationComponent::FindPathAStar(TArray<ANode*>& OutPath)
@@ -177,7 +213,7 @@ bool UAC_NavigationComponent::FinalizePath(const TSet<ANode*>& ClosedSet, const 
 	return true;
 }
 
-void UAC_NavigationComponent::DebugDrawFinalPath(float Duration /*= 2.0f*/, FColor LineColor /*= FColor::Green*/) const
+void UAC_NavigationComponent::DebugDrawFinalPath() const
 {
 	if (FinalPath.Num() < 2)
 	{
@@ -198,7 +234,7 @@ void UAC_NavigationComponent::DebugDrawFinalPath(float Duration /*= 2.0f*/, FCol
 		{
 			FVector From = FromNode->GetActorLocation();
 			FVector To = ToNode->GetActorLocation();
-			DrawDebugLine(World, From, To, LineColor, false, Duration, 0, 8.0f);
+			DrawDebugLine(World, From, To, FColor::White, false, 100.0f, 0, 8.0f);
 		}
 	}
 }
