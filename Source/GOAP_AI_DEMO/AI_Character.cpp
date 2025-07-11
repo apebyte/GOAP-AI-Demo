@@ -13,7 +13,7 @@ AAI_Character::AAI_Character()
     AIControllerClass = AAI_Character_Controller::StaticClass();
 
     // Initialize the GOAPAgentComponent
-    GOAPAgentComponent = CreateDefaultSubobject<UGOAPAgentComponent>(TEXT("GOAPAgentComponent"));
+    //GOAPAgentComponent = CreateDefaultSubobject<UGOAPAgentComponent>(TEXT("GOAPAgentComponent"));
 
     // Initialize the NavigationComponent
     NavigationComponent = CreateDefaultSubobject<UAC_NavigationComponent>(TEXT("NavigationComponent"));
@@ -26,24 +26,11 @@ void AAI_Character::BeginPlay()
     // Ensure NavigationComponent is valid
     if (NavigationComponent)
     {
-        UE_LOG(LogTemp, Warning, TEXT("AI_Character: NavigationComponent is valid."));
-        // Get the player character in the world
         ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
         if (PlayerCharacter)
         {
-            UE_LOG(LogTemp, Warning, TEXT("AI_Character: PlayerCharacter found."));
-            // Call FindStartAndEndNodes with the player's location
             NavigationComponent->FindStartAndEndNodes(PlayerCharacter->GetActorLocation());
         }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("AI_Character: PlayerCharacter NOT found!"));
-        }
-    }
-
-    else 
-    {
-        UE_LOG(LogTemp, Warning, TEXT("AI_Character: NavigationComponent is NOT valid."));
     }
 }
 

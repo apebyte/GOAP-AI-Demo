@@ -12,14 +12,20 @@ ANode::ANode()
     UpdateLinkSplines();
 }
 
+void ANode::BeginPlay()
+{
+    Super::BeginPlay();
+}
+
 void ANode::OnConstruction(const FTransform& Transform)
 {
     Super::OnConstruction(Transform);
 
-    // Always lift the node by 0.1 units on Z in the editor
     FVector Location = GetActorLocation();
     Location.Z += 0.01f;
     SetActorLocation(Location);
+
+    UpdateLinkSplines();
 }
 
 void ANode::UpdateNodeColor()
@@ -100,5 +106,3 @@ void ANode::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
     }
 }
 #endif
-
-

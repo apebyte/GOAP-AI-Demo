@@ -45,8 +45,4 @@ public:
 	// Finalizes the path from the closed set and CameFrom map
 	UFUNCTION(BlueprintCallable, Category = "Navigation")
 	bool FinalizePath(const TSet<ANode*>& ClosedSet, const TMap<ANode*, ANode*>& CameFrom);
-
-	// Debug: Draws the FinalPath using debug lines in the world
-	UFUNCTION(BlueprintCallable, Category = "Navigation|Debug")
-	void DebugDrawFinalPath() const;
 };
