@@ -14,6 +14,10 @@ public:
 	// Sets default values for this component's properties
 	UAC_NavigationComponent();
 
+	// If true, use line of sight filtering for navigation
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Navigation")
+	bool bUseLineOfSightFilter = false;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -40,7 +44,7 @@ public:
 
 	// Finds a path from StartNode to EndNode using A* search
 	UFUNCTION(BlueprintCallable, Category = "Navigation")
-	bool FindPathAStar(TArray<ANode*>& OutPath);
+	bool FindPathAStar();
 
 	// Finalizes the path from the closed set and CameFrom map
 	UFUNCTION(BlueprintCallable, Category = "Navigation")

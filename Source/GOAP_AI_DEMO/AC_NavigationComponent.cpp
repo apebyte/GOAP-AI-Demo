@@ -23,23 +23,26 @@ void UAC_NavigationComponent::TickComponent(float DeltaTime, ELevelTick TickType
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
 
+/**
+ * @brief Finds the closest navigation nodes to the AI character (start) and the target location (end).
+ *
+ * Iterates over all ANode actors in the world to determine which node is closest to the AI character's current location
+ * (StartNode) and which is closest to the specified target location (EndNode). Sets StartNode and EndNode accordingly.
+ * If both nodes are valid and distinct, initiates pathfinding using the A* algorithm.
+ *
+ * @param TargetLocation The world-space location to find the closest end node to.
+ */
 void UAC_NavigationComponent::FindStartAndEndNodes(const FVector& TargetLocation)
 {
-    UE_LOG(LogTemp, Warning, TEXT("FindStartAndEndNodes CALLED"));
-
     // Get the owner actor of this component (the AI character)
     AActor* Owner = GetOwner();
-    if (!Owner) {
-        UE_LOG(LogTemp, Warning, TEXT("FindStartAndEndNodes: Owner is nullptr"));
+    if (!Owner)
         return;
-    }
 
     // Get the world context
     UWorld* World = GetWorld();
-    if (!World) {
-        UE_LOG(LogTemp, Warning, TEXT("FindStartAndEndNodes: World is nullptr"));
+    if (!World)
         return;
-    }
     
     // Variables to track the closest nodes to the owner (start) and the target (end)
     ANode* ClosestStartNode = nullptr;
@@ -48,55 +51,51 @@ void UAC_NavigationComponent::FindStartAndEndNodes(const FVector& TargetLocation
     float ClosestEndDistSq = TNumericLimits<float>::Max();
     FVector OwnerLocation = Owner->GetActorLocation();
 
-	int32 NodeCount = 0;
-	// Iterate over all nodes in the world
-	for (TActorIterator<ANode> It(World); It; ++It)
-	{
-		NodeCount++;
-		ANode* Node = *It;
-		if (Node)
-		{
-			float StartDistSq = FVector::DistSquared(OwnerLocation, Node->GetActorLocation());
-			if (StartDistSq < ClosestStartDistSq)
-			{
-				ClosestStartDistSq = StartDistSq;
-				ClosestStartNode = Node;
-			}
+    int32 NodeCount = 0;
+    // Iterate over all nodes in the world
+    for (TActorIterator<ANode> It(World); It; ++It)
+    {
+        NodeCount++;
+        ANode* Node = *It;
+        if (Node)
+        {
+            // Calculate squared distance from owner to node
+            float StartDistSq = FVector::DistSquared(OwnerLocation, Node->GetActorLocation());
+            // Update closest start node if this node is closer
+            if (StartDistSq < ClosestStartDistSq)
+            {
+                ClosestStartDistSq = StartDistSq;
+                ClosestStartNode = Node;
+            }
 
-			float EndDistSq = FVector::DistSquared(TargetLocation, Node->GetActorLocation());
-			if (EndDistSq < ClosestEndDistSq)
-			{
-				ClosestEndDistSq = EndDistSq;
-				ClosestEndNode = Node;
-			}
-		}
-	}
-	UE_LOG(LogTemp, Warning, TEXT("Total nodes found: %d"), NodeCount);
-	UE_LOG(LogTemp, Warning, TEXT("Node search loop finished"));
+            // Calculate squared distance from target to node
+            float EndDistSq = FVector::DistSquared(TargetLocation, Node->GetActorLocation());
+            // Update closest end node if this node is closer
+            if (EndDistSq < ClosestEndDistSq)
+            {
+                ClosestEndDistSq = EndDistSq;
+                ClosestEndNode = Node;
+            }
+        }
+    }
 
-	StartNode = ClosestStartNode;
-	EndNode = ClosestEndNode;
+    // Set the found nodes as start and end nodes
+    StartNode = ClosestStartNode;
+    EndNode = ClosestEndNode;
 
-	// Debug draw spheres for start (red) and end (blue) nodes
-	if (StartNode)
-	{
-		DrawDebugSphere(World, StartNode->GetActorLocation(), 50.0f, 16, FColor::Red, false, 200.0f);
-	}
-	if (EndNode)
-	{
-		DrawDebugSphere(World, EndNode->GetActorLocation(), 50.0f, 16, FColor::Blue, false, 200.0f);
-	}
+    // Debug draw spheres for start (red) and end (blue) nodes
+    if (StartNode)
+    {
+        DrawDebugSphere(World, StartNode->GetActorLocation(), 50.0f, 16, FColor::Red, false, 200.0f);
+    }
+    if (EndNode)
+    {
+        DrawDebugSphere(World, EndNode->GetActorLocation(), 50.0f, 16, FColor::Blue, false, 200.0f);
+    }
 
-	UE_LOG(LogTemp, Warning, TEXT("StartNode: %s, EndNode: %s"), 
-		StartNode ? *StartNode->GetName() : TEXT("None"), 
-		EndNode ? *EndNode->GetName() : TEXT("None"));
-
-	// If both nodes are found and are not the same, call FindPathAStar
-	if (StartNode && EndNode && StartNode != EndNode)
-	{
-		TArray<ANode*> OutPath;
-		FindPathAStar(OutPath);
-	}
+    // If both nodes are found and are not the same, call FindPathAStar
+    if (StartNode && EndNode && StartNode != EndNode)
+        FindPathAStar();
 }
 
 /**
@@ -113,14 +112,8 @@ void UAC_NavigationComponent::FindStartAndEndNodes(const FVector& TargetLocation
  * - For each node, checks all linked neighbors and updates their costs if a better path is found.
  * - When the EndNode is reached, reconstructs the path using the CameFrom map.
  */
-bool UAC_NavigationComponent::FindPathAStar(TArray<ANode*>& OutPath)
+bool UAC_NavigationComponent::FindPathAStar()
 {
-    OutPath.Empty();
-
-    // Early exit if start or end nodes are invalid or the same
-    if (!StartNode || !EndNode || StartNode == EndNode)
-        return false;
-
     // Heuristic function: straight-line distance between two nodes
     auto Heuristic = [](ANode* A, ANode* B) {
         return FVector::Dist(A->GetActorLocation(), B->GetActorLocation());
@@ -139,32 +132,28 @@ bool UAC_NavigationComponent::FindPathAStar(TArray<ANode*>& OutPath)
         It->FCost = TNumericLimits<float>::Max();
     }
 
-    // Initialize start node costs
+	// Initialize start node costs and add it to the OpenSet
     StartNode->GCost = 0.0f;
     StartNode->HCost = Heuristic(StartNode, EndNode);
     StartNode->FCost = StartNode->HCost;
-
     OpenSet.Add(StartNode);
 
     // Main A* loop
     while (OpenSet.Num() > 0)
     {
-        // Find node in OpenSet with lowest FCost (and lowest HCost as tiebreaker)
         ANode* Current = OpenSet[0];
+
+        // Find node in OpenSet with lowest FCost (and lowest HCost as tiebreaker)
         for (ANode* Node : OpenSet)
         {
-            if (Node->FCost < Current->FCost ||
-                (Node->FCost == Current->FCost && Node->HCost < Current->HCost))
-            {
+           if (Node->FCost < Current->FCost || (Node->FCost == Current->FCost && Node->HCost < Current->HCost))
                 Current = Node;
-            }
         }
 
         // If we've reached the goal, reconstruct the path and return
         if (Current == EndNode)
         {
             bool bPathFound = FinalizePath(ClosedSet, CameFrom);
-            OutPath = FinalPath;
             return bPathFound;
         }
 
@@ -190,9 +179,7 @@ bool UAC_NavigationComponent::FindPathAStar(TArray<ANode*>& OutPath)
                 Neighbor->FCost = Neighbor->GCost + Neighbor->HCost;
 
                 if (!OpenSet.Contains(Neighbor))
-                {
                     OpenSet.Add(Neighbor);
-                }
             }
         }
     }
@@ -210,10 +197,6 @@ bool UAC_NavigationComponent::FinalizePath(const TSet<ANode*>& ClosedSet, const 
 	if (!StartNode || !EndNode)
 		return false;
 
-	// If the end node is not in the closed set, no path was found
-	if (!ClosedSet.Contains(EndNode))
-		return false;
-
 	// Reconstruct the path from EndNode to StartNode using the CameFrom map
 	ANode* PathNode = EndNode;
 	while (PathNode)
@@ -221,36 +204,24 @@ bool UAC_NavigationComponent::FinalizePath(const TSet<ANode*>& ClosedSet, const 
 		FinalPath.Add(PathNode);
 		if (PathNode == StartNode)
 			break;
+		// Use PathNode as the key to get the previous node
 		PathNode = CameFrom.Contains(PathNode) ? CameFrom[PathNode] : nullptr;
 	}
 
-	// If we didn't reach the start node, the path is incomplete
-	if (FinalPath.Last() != StartNode)
-		return false;
-
 	Algo::Reverse(FinalPath);
 
-	// Draw debug spheres for the path
+	// Draw debug spheres for the final path (green)
 	UWorld* World = GetWorld();
 	if (World)
 	{
-		for (int32 i = 0; i < FinalPath.Num(); ++i)
+		for (ANode* Node : FinalPath)
 		{
-			ANode* Node = FinalPath[i];
-			FColor Color = FColor::Green;
-			if (Node == StartNode)
-				Color = FColor::Red;
-			else if (Node == EndNode)
-				Color = FColor::Blue;
-
-			UE_LOG(LogTemp, Warning, TEXT("Drawing sphere at %s, color: %s"), *Node->GetName(), *Color.ToString());
-
 			DrawDebugSphere(
 				World,
 				Node->GetActorLocation(),
 				50.0f,
 				16,
-				Color,
+				FColor::Green,
 				false,
 				10.0f
 			);
