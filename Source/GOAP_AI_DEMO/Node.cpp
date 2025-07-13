@@ -39,7 +39,7 @@ void ANode::UpdateNodeColor()
 
     switch (NodeType)
     {
-        case ENodeType::None:
+        case ENodeType::Walk:
             Color = FLinearColor::Blue;
             break;
         case ENodeType::Cover:

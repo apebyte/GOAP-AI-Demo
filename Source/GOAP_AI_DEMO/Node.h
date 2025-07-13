@@ -17,7 +17,7 @@ public:
 
     // Linked nodes for movement or decision-making
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Node")
-    TArray<ANode*> LinkedNodes;
+    TMap<ANode*, ENodeConnectionType> LinkedNodes;
 
     // Type of this node (e.g. Patrol, Cover)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Node")

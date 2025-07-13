@@ -18,7 +18,7 @@
  */
 bool UUPlayerLOSFilter::IsNodeValid(ANode* Node) const
 {
-	return IsNodeInPlayerLOS(Node);
+	return !IsNodeInPlayerLOS(Node);
 }
 
 /**
@@ -27,8 +27,8 @@ bool UUPlayerLOSFilter::IsNodeValid(ANode* Node) const
  * This function iterates over all player controllers in the world, retrieves their camera location and forward vector,
  * and performs two tests for each player:
  * 1. Dot Product: Checks if the node is in front of the player's camera.
- * 2. Line Trace: Checks if there is a clear line of sight from the camera to the node.
- * Both tests must pass for the node to be considered in LOS.
+ * 2. Line Trace: Checks if there is a clear line of sight from the camera to a point slightly above the node.
+ *    The trace must not hit any object to be considered valid (since nodes have no collision).
  *
  * @param Node Pointer to the node to check.
  * @return true if the node is in LOS of any player, false otherwise.
@@ -43,6 +43,7 @@ bool UUPlayerLOSFilter::IsNodeInPlayerLOS(ANode* Node) const
 		return false;
 
 	const FVector NodeLocation = Node->GetActorLocation();
+	const FVector NodeTarget = NodeLocation + FVector(0, 0, 0.1f); // Slightly above the node
 
 	// Iterate over all player controllers
 	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
@@ -90,14 +91,14 @@ bool UUPlayerLOSFilter::IsNodeInPlayerLOS(ANode* Node) const
 		bool bHit = World->LineTraceSingleByChannel(
 			HitResult,
 			CameraLocation,
-			NodeLocation,
+			NodeTarget,
 			ECC_Visibility,
 			TraceParams
 		);
 
-		if (bHit && HitResult.GetActor() == Node)
+		// If nothing was hit, there is a clear line of sight to the node
+		if (!bHit)
 		{
-			// Both tests passed for this player
 			return true;
 		}
 	}

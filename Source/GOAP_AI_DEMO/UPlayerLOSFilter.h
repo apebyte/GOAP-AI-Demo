@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UNavFilter.h"
-#include "Node.h" // Ensure Node is included
+#include "Node.h"
 #include "UPlayerLOSFilter.generated.h"
 
 /**

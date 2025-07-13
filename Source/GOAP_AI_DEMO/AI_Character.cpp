@@ -22,16 +22,6 @@ AAI_Character::AAI_Character()
 void AAI_Character::BeginPlay()
 {
     Super::BeginPlay();
-
-    // Ensure NavigationComponent is valid
-    if (NavigationComponent)
-    {
-        ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
-        if (PlayerCharacter)
-        {
-            NavigationComponent->FindStartAndEndNodes(PlayerCharacter->GetActorLocation());
-        }
-    }
 }
 
 // Patrol logic: move to each node in the PatrolPath in sequence

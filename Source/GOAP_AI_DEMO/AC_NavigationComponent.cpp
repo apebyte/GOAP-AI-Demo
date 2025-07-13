@@ -1,23 +1,53 @@
+/**
+ * @file AC_NavigationComponent.cpp
+ * @brief Implements the navigation component for AI pathfinding, including node search, pathfinding, and filter logic.
+ */
+
 #include "AC_NavigationComponent.h"
-#include "EngineUtils.h" // For TActorIterator
+#include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #include "Containers/Queue.h"
 #include "Algo/Reverse.h"
-#include "DrawDebugHelpers.h" // Add this include for debug drawing
+#include "DrawDebugHelpers.h"
 
-// Sets default values for this component's properties
+/**
+ * @brief Default constructor. Sets default values for this component's properties.
+ */
 UAC_NavigationComponent::UAC_NavigationComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 }
 
-// Called when the game starts
+/**
+ * @brief Called when the game starts. Instantiates navigation filters from selected classes.
+ */
 void UAC_NavigationComponent::BeginPlay()
 {
-	Super::BeginPlay();
+	Super::BeginPlay();     
+
+	// Clear any previous instances
+	NavFilters.Empty();
+
+	// Instantiate filters from selected classes
+	for (TSubclassOf<UUNavFilter> FilterClass : NavFilterClasses)
+	{
+		if (FilterClass)
+		{
+			UUNavFilter* Filter = NewObject<UUNavFilter>(this, FilterClass);
+			if (Filter)
+			{
+				NavFilters.Add(Filter);
+			}
+		}
+	}
 }
 
-// Called every frame
+/**
+ * @brief Called every frame.
+ * @param DeltaTime Time since last tick.
+ * @param TickType Type of tick.
+ * @param ThisTickFunction Tick function data.
+ */
 void UAC_NavigationComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -93,17 +123,15 @@ void UAC_NavigationComponent::FindStartAndEndNodes(const FVector& TargetLocation
         DrawDebugSphere(World, EndNode->GetActorLocation(), 50.0f, 16, FColor::Blue, false, 200.0f);
     }
 
+    UE_LOG(LogTemp, Warning, TEXT("StartNode: %s, EndNode: %s"), *GetNameSafe(StartNode), *GetNameSafe(EndNode));
+
     // If both nodes are found and are not the same, call FindPathAStar
     if (StartNode && EndNode && StartNode != EndNode)
         FindPathAStar();
 }
 
 /**
- * Attempts to find a path from StartNode to EndNode using the A* search algorithm.
- * The resulting path is stored in OutPath if found.
- *
- * @param OutPath Reference to an array that will be filled with the path nodes (from start to end) if a path is found.
- * @return true if a path was found, false otherwise.
+ * @brief Attempts to find a path from StartNode to EndNode using the A* search algorithm.
  *
  * The function uses the following logic:
  * - Initializes all node costs.
@@ -111,6 +139,8 @@ void UAC_NavigationComponent::FindStartAndEndNodes(const FVector& TargetLocation
  * - Maintains an open set (nodes to be evaluated) and a closed set (already evaluated).
  * - For each node, checks all linked neighbors and updates their costs if a better path is found.
  * - When the EndNode is reached, reconstructs the path using the CameFrom map.
+ *
+ * @return true if a path was found, false otherwise.
  */
 bool UAC_NavigationComponent::FindPathAStar()
 {
@@ -132,7 +162,14 @@ bool UAC_NavigationComponent::FindPathAStar()
         It->FCost = TNumericLimits<float>::Max();
     }
 
-	// Initialize start node costs and add it to the OpenSet
+    // Validate start and end nodes
+    if (!IsNodeValidForTraversal(StartNode) || !IsNodeValidForTraversal(EndNode))
+    {
+        FinalPath.Empty();
+        return false;
+    }
+
+    // Initialize start node costs and add it to the OpenSet
     StartNode->GCost = 0.0f;
     StartNode->HCost = Heuristic(StartNode, EndNode);
     StartNode->FCost = StartNode->HCost;
@@ -146,7 +183,7 @@ bool UAC_NavigationComponent::FindPathAStar()
         // Find node in OpenSet with lowest FCost (and lowest HCost as tiebreaker)
         for (ANode* Node : OpenSet)
         {
-           if (Node->FCost < Current->FCost || (Node->FCost == Current->FCost && Node->HCost < Current->HCost))
+            if (Node->FCost < Current->FCost || (Node->FCost == Current->FCost && Node->HCost < Current->HCost))
                 Current = Node;
         }
 
@@ -164,7 +201,8 @@ bool UAC_NavigationComponent::FindPathAStar()
         // Check all neighbors of the current node
         for (ANode* Neighbor : Current->LinkedNodes)
         {
-            if (!Neighbor || ClosedSet.Contains(Neighbor))
+            // Skip invalid or already closed nodes
+            if (!Neighbor || ClosedSet.Contains(Neighbor) || !IsNodeValidForTraversal(Neighbor))
                 continue;
 
             // Calculate tentative G cost for neighbor
@@ -184,12 +222,30 @@ bool UAC_NavigationComponent::FindPathAStar()
         }
     }
 
+    for (ANode* Node : OpenSet) {
+        FString Linked;
+        for (ANode* L : Node->LinkedNodes) {
+            Linked += L ? L->GetName() + TEXT(" ") : TEXT("nullptr ");
+        }
+        UE_LOG(LogTemp, Warning, TEXT("Node %s links: %s"), *Node->GetName(), *Linked);
+    }
+
     // No path found
     FinalPath.Empty();
     return false;
 }
 
-// Finalizes the path from the closed set and CameFrom map, storing it in FinalPath
+/**
+ * @brief Finalizes the path from StartNode to EndNode using the provided CameFrom map.
+ *
+ * Reconstructs the path by traversing from EndNode back to StartNode using the CameFrom map,
+ * storing the resulting sequence of nodes in FinalPath. The path is reversed to ensure it runs
+ * from StartNode to EndNode. Optionally, draws debug spheres for each node in the final path.
+ *
+ * @param ClosedSet Set of nodes that were evaluated during pathfinding (not used in reconstruction).
+ * @param CameFrom Map of each node to its predecessor, used to reconstruct the path.
+ * @return true if a valid path was reconstructed, false otherwise.
+ */
 bool UAC_NavigationComponent::FinalizePath(const TSet<ANode*>& ClosedSet, const TMap<ANode*, ANode*>& CameFrom)
 {
 	FinalPath.Empty();
@@ -231,3 +287,25 @@ bool UAC_NavigationComponent::FinalizePath(const TSet<ANode*>& ClosedSet, const 
 	return true;
 }
 
+/**
+ * @brief Determines whether a given node is valid for traversal based on navigation filters.
+ *
+ * The function uses the following logic:
+ * - Checks if the node is null.
+ * - Iterates through all navigation filters; if any filter deems the node invalid, the node is considered invalid.
+ *
+ * @param Node The node to validate.
+ * @return true if the node is valid for traversal, false otherwise.
+ */
+bool UAC_NavigationComponent::IsNodeValidForTraversal(ANode* Node) const
+{
+    // Iterate through all filters; if any filter fails, node is invalid
+    for (const UUNavFilter* Filter : NavFilters)
+    {
+        if (Filter && !Filter->IsNodeValid(Node))
+        {
+            return false;
+        }
+    }
+    return true;
+}
