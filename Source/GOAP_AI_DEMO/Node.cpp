@@ -72,8 +72,9 @@ void ANode::UpdateLinkSplines()
     DebugSplines.Empty();
 
     // Create a spline for each connection
-    for (ANode* LinkedNode : LinkedNodes)
+    for (const TPair<ANode*, ENodeConnectionType>& Pair : LinkedNodes)
     {
+        ANode* LinkedNode = Pair.Key;
         if (LinkedNode)
         {
             USplineComponent* Spline = NewObject<USplineComponent>(this, NAME_None, RF_Transient);

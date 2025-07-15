@@ -14,9 +14,6 @@ AAI_Character::AAI_Character()
 
     // Initialize the GOAPAgentComponent
     //GOAPAgentComponent = CreateDefaultSubobject<UGOAPAgentComponent>(TEXT("GOAPAgentComponent"));
-
-    // Initialize the NavigationComponent
-    NavigationComponent = CreateDefaultSubobject<UAC_NavigationComponent>(TEXT("NavigationComponent"));
 }
 
 void AAI_Character::BeginPlay()

@@ -4,7 +4,6 @@
 #include "GameFramework/Character.h"
 #include "Node.h"
 #include "GOAPAgentComponent.h"
-#include "AC_NavigationComponent.h"
 #include "AI_Character.generated.h"
 
 struct FAIRequestID;
@@ -32,10 +31,6 @@ public:
     /** GOAP Agent Component */
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "GOAP")
     UGOAPAgentComponent* GOAPAgentComponent;
-
-    /** Navigation Component */
-    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Navigation")
-    UAC_NavigationComponent* NavigationComponent;
 
 private:
     void MoveToNode(ANode* Target); // Issues the MoveTo request
